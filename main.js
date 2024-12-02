@@ -1,4 +1,5 @@
 const mineflayer = require("mineflayer");
+const autoEat = require('mineflayer-auto-eat')
 const {
   pathfinder,
   Movements,
@@ -43,6 +44,8 @@ function registerCommand(name, description, operator_level, handler) {
 }
 
 bot.once("spawn", () => {
+  // bot.autoEat.enableAuto()
+
 
   cmd_chat.registerCommands(registerCommand, bot, commands);
   cmd_admin.registerCommands(registerCommand, bot, commands);
@@ -146,9 +149,6 @@ module.exports = {
 };
 
 /*
-equip armor               [*]
 eat food when hunrgy
-log chat                  [*]
-secret msg
 
 */
