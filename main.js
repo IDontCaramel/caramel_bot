@@ -57,54 +57,22 @@ bot.on('soundEffectHeard', function(soundName, position,){
 
 
 
-
-// bot.on("chat", function (username, message) {
-//   action_logger.log_message_to_file(username, message);
-//   if (username === bot.username) return;
-
-//   message = message.toLowerCase();
-
-//   if (message.startsWith(prefix)) {
-//     const args = message.slice(prefix.length).trim().split(/\s+/);
-//     const command = args.shift().toLowerCase();
-
-//     console.log(`Received command: ${command}`);
-//     console.log('Available commands:', Object.keys(commands)); // Ensure commands are correctly registered
-
-//     if (commands[command]) {
-//       try {
-//         const commandInfo = commands[command];
-//         console.log(`Executing command: ${commandInfo.description}`);
-
-//         // Log the handler to confirm it's valid
-//         console.log(`Command handler for '${command}':`, commandInfo.handler);
-
-//         if (typeof commandInfo.handler === 'function') {
-//           const isAdmin = admin_manager.is_admin(username);
-//           if (commandInfo.operator_level <= (isAdmin ? 2 : 1)) {
-//             console.log(`Executing command handler with args:`, args);  // Log the args passed to the handler
-//             commandInfo.handler(username, args);
-//           } else {
-//             bot.whisper(username, "You do not have permission to use this command.");
-//           }
-//         } else {
-//           console.error(`Error: Command handler for '${command}' is not a function.`);
-//           bot.whisper(username, `Error: Invalid handler for command '${command}'.`);
-//         }
-//       } catch (err) {
-//         console.error(`Error executing command: ${err.message}`);
-//         bot.whisper(username, `Error executing command: ${err.message}`);
-//       }
-//     } else {
-//       bot.whisper(username, `Unknown command: ${command}`);
-//     }
-//   }
-// });
-
-
-
 bot.on("chat", function (username, message) {
+  handleMessage(username, message)
   action_logger.log_message_to_file(username, message);
+
+});
+
+
+bot.on("whisper", function (username, message){
+  handleMessage(username, message)
+  action_logger.log_message_to_file(username, `whisper: ${message}`);
+
+})
+
+
+
+function handleMessage(username, message) {
 
   // If the bot sends the message, ignore it
   if (username === bot.username) return;
@@ -138,7 +106,7 @@ bot.on("chat", function (username, message) {
       bot.whisper(username, "Unknown command.");
     }
   }
-});
+}
 
 
 

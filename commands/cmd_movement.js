@@ -35,30 +35,82 @@ function registerCommands(registerCommand, bot, commands) {
     }
   );
 
+
+  let currentTarget = null;
   registerCommand(
-    "setpos",
-    "Makes the bot hover 100 blocks above the player's position and follow them for 20 seconds.",
-    1,
+    "follow",
+    "Makes the bot hover 100 blocks above the player's position and follow them until stopped.",
+    2,
     (username, args) => {
-      const player = bot.players[username];
-      if (!player) {
-        bot.chat("Player not found.");
-        return;
-      }
+      const msg = args.split(" ");
+    if (msg.length < 2) {
+      bot.whisper(username, "Please specify a player and a height.");
+      return;
+    }
+
+    const targetPlayerName = msg[1];
+    const targetHeight = parseInt(msg[2]);
+
+    if (isNaN(targetHeight)) {
+      bot.whisper(username, "Please specify a valid height (a number).");
+      return;
+    }
+
+    const player = Object.values(bot.players).find(
+      (p) => p.username.toLowerCase() === targetPlayerName.toLowerCase()
+    );
+
+    if (!player || !player.entity) {
+      bot.whisper(username, "Player not found or not in range.");
+      return;
+    }
+
+    if (currentTarget) {
+      bot.whisper(
+        username,
+        `The bot is already following ${currentTarget.username}. Use the "stopfollow" command to stop.`
+      );
+      return;
+    }
+
+    currentTarget = player; // Set the current target
+    bot.whisper(username, `Now following ${targetPlayerName}.`);
   
       // Get player's current position
       const playerPosition = player.entity.position.clone();
   
-      // Store the bot's original position
-      const originalBotPosition = bot.entity.position.clone();
   
       // The target Y position (100 blocks above the player)
-      const targetY = playerPosition.y + 20;
+      const targetY = playerPosition.y + targetHeight;
+  
+      let stopFollowing = false; // Flag to control following behavior
+  
+      // Function to stop the bot's actions
+      function stopBot() {
+        stopFollowing = true;
+        currentTarget = null; 
+        // Check if the player entity is still available
+        if (player && player.entity && player.entity.position) {
+          const lastLocation = player.entity.position.clone();
+          bot.whisper(
+            username,
+            `The bot stopped following the ${player} at: X=${lastLocation.x.toFixed(
+              2
+            )}, Y=${lastLocation.y.toFixed(2)}, Z=${lastLocation.z.toFixed(2)}`
+          );
+        } else {
+          bot.whisper(username, "The bot stopped following, but the player's position could not be determined.");
+        }
+      }
   
       // Move the bot in steps of 10 blocks vertically
       const verticalInterval = setInterval(() => {
+        if (stopFollowing) {
+          clearInterval(verticalInterval);
+          return;
+        }
+  
         const botY = bot.entity.position.y;
-        // Check if the bot is within 10 blocks of the target Y level
         if (Math.abs(botY - targetY) <= 10) {
           clearInterval(verticalInterval); // Stop moving vertically
           moveToHorizontalPosition(); // Start horizontal adjustment
@@ -73,47 +125,48 @@ function registerCommands(registerCommand, bot, commands) {
   
       function moveToHorizontalPosition() {
         const horizontalInterval = setInterval(() => {
+          if (stopFollowing) {
+            clearInterval(horizontalInterval);
+            return;
+          }
+  
           const botX = bot.entity.position.x;
           const botZ = bot.entity.position.z;
   
           const dx = playerPosition.x - botX;
           const dz = playerPosition.z - botZ;
   
-          // Move closer to the player's horizontal position
           const newX = botX + Math.sign(dx) * Math.min(10, Math.abs(dx));
           const newZ = botZ + Math.sign(dz) * Math.min(10, Math.abs(dz));
   
-          // Compensate to maintain the target altitude
           const botY = bot.entity.position.y;
-          const newY = Math.max(botY, targetY); // Ensure the bot doesn't fall
+          const newY = Math.max(botY, targetY);
   
           bot.entity.position.set(newX, newY, newZ);
   
-          // Stop if the bot has reached the player's horizontal position
           if (Math.abs(dx) <= 10 && Math.abs(dz) <= 10) {
             clearInterval(horizontalInterval);
-            followPlayer(); // Start following the player
+            followPlayer();
           }
         }, 50); // Adjust horizontal position every 50ms
       }
   
       function followPlayer() {
         const followInterval = setInterval(() => {
-          const playerPosition = player.entity.position.clone(); // Update player's current position
-          bot.entity.position.set(playerPosition.x, targetY, playerPosition.z); // Maintain altitude while following
-        }, 50); // Follow player every 50ms
+          if (stopFollowing) {
+            clearInterval(followInterval);
+            return;
+          }
   
-        // Stop following after 20 seconds
-        setTimeout(() => {
-          clearInterval(followInterval); // Stop following
-          bot.entity.position.set(
-            originalBotPosition.x,
-            originalBotPosition.y,
-            originalBotPosition.z
-          ); // Return to the original position
-          bot.chat("The bot has returned to its original position.");
-        }, 20000); // Follow for 20 seconds
+          const playerPosition = player.entity.position.clone();
+          bot.entity.position.set(playerPosition.x, targetY, playerPosition.z);
+        }, 50); // Follow player every 50ms
       }
+  
+      // Register a command to stop the bot
+      registerCommand("stopfollow", "Stops the bot from following the player.", 2, () => {
+        stopBot();
+      });
     }
   );
   
